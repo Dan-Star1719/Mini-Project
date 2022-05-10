@@ -1,3 +1,2 @@
 seaborn
 altair
-plotly express
