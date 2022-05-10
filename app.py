@@ -170,8 +170,10 @@ with st.echo(code_location='below'):
     if a:
         gran_prix = st.selectbox('Choose the Gran Prix:', races_in_this_year['name'].unique())
 
-    df1 = qualifying.merge(races[lambda x: x['year']==a], left_on='raceId', right_on='raceId')
-    df = df1[lambda x: x['name']==gran_prix].merge(drivers, left_on='driverId', right_on='driverId')
+
+    df1 = qualifying.merge(races[lambda x: x['year'] == a], left_on='raceId', right_on='raceId')
+    df = df1[lambda x: x['name'] == gran_prix].merge(drivers, left_on='driverId', right_on='driverId')
+    chosen_driver = st.selectbox('Choose the driver:', df['fullname'].unique())
 
     #number_of_drivers = len(df.index)
     ### https://question-it.com/questions/1146283/pandas-preobrazovanie-vremeni-v-sekundy-dlja-vseh-znachenij-v-stolbtse
@@ -184,6 +186,11 @@ with st.echo(code_location='below'):
     df['type1'] = 'Q1'
     df['type2'] = 'Q2'
     df['type3'] = 'Q3'
+
+
+
+    df2 = df[lambda x: x['fullname']==chosen_driver]
+    df3 = pd.DataFrame({'time': [df2.iloc[0]['q1'], df2.iloc[0]['q2'], df2.iloc[0]['q3']], 'session': ['Q1', 'Q2', 'Q3']})
 
     fig1 = (alt.Chart(df).mark_point(size=50, filled=True)
             .encode(alt.X('q1', scale=alt.Scale(zero=False), axis=alt.Axis(title='Lap time')),
@@ -203,8 +210,13 @@ with st.echo(code_location='below'):
                     color=alt.Color('fullname', legend=alt.Legend(title='The drivers')),
                     tooltip = [alt.Tooltip('fullname'), alt.Tooltip('q3')])
             .properties(height=500, width=500).interactive())
+    points = (alt.Chart(df3).mark_point(size=150, filled=True, color='black')
+            .encode(alt.X('time', scale=alt.Scale(zero=False), axis=alt.Axis(title='Lap time')),
+                    alt.Y('session', scale=alt.Scale(zero=False), axis=alt.Axis(title='Session')),
+                    tooltip = [alt.Tooltip('time'), alt.Tooltip('session')])
+            .properties(height=500, width=500).interactive())
 
-    st.altair_chart(fig1+fig2+fig3)
+    st.altair_chart(fig1+fig2+fig3+points)
 
 
 
