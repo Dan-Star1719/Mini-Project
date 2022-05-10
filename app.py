@@ -90,11 +90,11 @@ with st.echo(code_location='below'):
                                 .merge(drivers, left_on='driverId', right_on='driverId')[:])
     number_of_victories = (victories_by_drivers[lambda x: x['nationality'] == nationality]
                            .groupby("fullname")['raceId'].count())
-    total_victories = (pd.DataFrame({'driver': number_of_victories.index, 'victories': number_of_victories})
-        .sort_values('victories', ascending =False).reset_index()[['driver', 'victories']])
+    total_victories = (pd.DataFrame({'Driver': number_of_victories.index, 'Number of victories': number_of_victories})
+        .sort_values('Number of victories', ascending =False).reset_index()[['Driver', 'Number of victories']])
     if not total_victories.empty:
         fig, ax = plt.subplots()
-        chart = sns.barplot(y=total_victories['driver'], x=total_victories['victories'] , ax=ax,  palette='crest')
+        chart = sns.barplot(y=total_victories['Driver'], x=total_victories['Number of victories'] , ax=ax,  palette='crest')
         chart.bar_label(chart.containers[0], fontsize=8.5, color='black')
         st.pyplot(fig)
     else:
@@ -106,16 +106,16 @@ with st.echo(code_location='below'):
     nationalities =  st.multiselect("Choose few nationalities:", drivers["nationality"].unique())
     number_of_victories_by_nations = (victories_by_drivers[lambda x: x['nationality']
                                       .isin(nationalities)].groupby("nationality")['raceId'].count())
-    total_victories_by_nations = (pd.DataFrame({'nationality': number_of_victories_by_nations.reset_index()['nationality'],
-                                               'victories': number_of_victories_by_nations.reset_index()['raceId']})
-                                  .sort_values('victories', ascending=False))
+    total_victories_by_nations = (pd.DataFrame({'Nationality': number_of_victories_by_nations.reset_index()['nationality'],
+                                               'Number of victories': number_of_victories_by_nations.reset_index()['raceId']})
+                                  .sort_values('Number of victories', ascending=False))
     for element in nationalities:
-        if not total_victories_by_nations['nationality'].isin([element]).any():
+        if not total_victories_by_nations['Nationality'].isin([element]).any():
             total_victories_by_nations = (total_victories_by_nations
-                                          .append({'nationality': element, 'victories': 0}, ignore_index=True))
+                                          .append({'Nationality': element, 'Number of victories': 0}, ignore_index=True))
     if not total_victories_by_nations.empty:
         fig, ax = plt.subplots()
-        chart = sns.barplot(y=total_victories_by_nations['nationality'], x=total_victories_by_nations['victories'], ax=ax)
+        chart = sns.barplot(y=total_victories_by_nations['Nationality'], x=total_victories_by_nations['Number of victories'], ax=ax)
         chart.bar_label(chart.containers[0], fontsize=8.5, color='black')
         st.pyplot(fig)
     else:
@@ -162,6 +162,49 @@ with st.echo(code_location='below'):
         chart3.bar_label(chart3.containers[0], fontsize=8.5, color='black')
         st.pyplot(fig)
 
+
+
+
+    a = st.slider('Choose the year:', 2006, 2021)
+    races_in_this_year = races[lambda x: x['year'] == a]
+    if a:
+        gran_prix = st.selectbox('Choose the Gran Prix:', races_in_this_year['name'].unique())
+
+    df1 = qualifying.merge(races[lambda x: x['year']==a], left_on='raceId', right_on='raceId')
+    df = df1[lambda x: x['name']==gran_prix].merge(drivers, left_on='driverId', right_on='driverId')
+
+    #number_of_drivers = len(df.index)
+    ### https://question-it.com/questions/1146283/pandas-preobrazovanie-vremeni-v-sekundy-dlja-vseh-znachenij-v-stolbtse
+    df['q1'] = (df[df['q1'].str[0].isin(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'])]
+                ['q1'].map(lambda x: sum(x * float(t) for x, t in zip([60.0, 1.0], x.split(':')))))
+    df['q2'] = (df[df['q2'].str[0].isin(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'])]
+                ['q2'].map(lambda x: sum(x * float(t) for x, t in zip([60.0, 1.0], x.split(':')))))
+    df['q3'] = (df[df['q3'].str[0].isin(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'])]
+                ['q3'].map(lambda x: sum(x * float(t) for x, t in zip([60.0, 1.0], x.split(':')))))
+    df['type1'] = 'Q1'
+    df['type2'] = 'Q2'
+    df['type3'] = 'Q3'
+
+    fig1 = (alt.Chart(df).mark_point(size=50, filled=True)
+            .encode(alt.X('q1', scale=alt.Scale(zero=False), axis=alt.Axis(title='Lap time')),
+                    alt.Y('type1', scale=alt.Scale(zero=False), axis=alt.Axis(title='Session')),
+                    color=alt.Color('fullname', legend=alt.Legend(title='The drivers')),
+                    tooltip = [alt.Tooltip('fullname'), alt.Tooltip('q1')])
+            .properties(height=500, width=500).interactive())
+    fig2 = (alt.Chart(df).mark_point(size=50, filled=True)
+            .encode(alt.X('q2', scale=alt.Scale(zero=False), axis=alt.Axis(title='Lap time')),
+                    alt.Y('type2', scale=alt.Scale(zero=False), axis=alt.Axis(title='Session')),
+                    color=alt.Color('fullname', legend=alt.Legend(title='The drivers')),
+                    tooltip = [alt.Tooltip('fullname'), alt.Tooltip('q2')])
+            .properties(height=500, width=500).interactive())
+    fig3 = (alt.Chart(df).mark_point(size=50, filled=True)
+            .encode(alt.X('q3', scale=alt.Scale(zero=False), axis=alt.Axis(title='Lap time')),
+                    alt.Y('type3', scale=alt.Scale(zero=False), axis=alt.Axis(title='Session')),
+                    color=alt.Color('fullname', legend=alt.Legend(title='The drivers')),
+                    tooltip = [alt.Tooltip('fullname'), alt.Tooltip('q3')])
+            .properties(height=500, width=500).interactive())
+
+    st.altair_chart(fig1+fig2+fig3)
 
 
 
