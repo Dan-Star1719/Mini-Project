@@ -93,9 +93,9 @@ with st.echo(code_location='below'):
     total_victories = (pd.DataFrame({'driver': number_of_victories.index, 'victories': number_of_victories})
         .sort_values('victories', ascending =False).reset_index()[['driver', 'victories']])
     if not total_victories.empty:
-        total_victories
         fig, ax = plt.subplots()
-        sns.barplot(y=total_victories['driver'], x=total_victories['victories'] , ax=ax,  palette='crest')
+        chart = sns.barplot(y=total_victories['driver'], x=total_victories['victories'] , ax=ax,  palette='crest')
+        chart.bar_label(chart.containers[0], fontsize=8.5, color='black')
         st.pyplot(fig)
     else:
         """Nobody from this country has won any races. Thy to choose another nationality!"""
@@ -114,11 +114,55 @@ with st.echo(code_location='below'):
             total_victories_by_nations = (total_victories_by_nations
                                           .append({'nationality': element, 'victories': 0}, ignore_index=True))
     if not total_victories_by_nations.empty:
-        total_victories_by_nations
         fig, ax = plt.subplots()
-        sns.barplot(y=total_victories_by_nations['nationality'], x=total_victories_by_nations['victories'], ax=ax)
+        chart = sns.barplot(y=total_victories_by_nations['nationality'], x=total_victories_by_nations['victories'], ax=ax)
+        chart.bar_label(chart.containers[0], fontsize=8.5, color='black')
         st.pyplot(fig)
     else:
         """Nobody has been chosen yet."""
+
+    """You can find three kinds of criteria that can be used to compare the drivers. 
+    You can choose one of them and look at top-20 drivers in terms of the chosen criteria."""
+
+    choice = st.radio('Choose:', ['Number of the races', 'Number of the podiums', 'Number of the victories'])
+
+    total_results = results.merge(drivers, left_on='driverId', right_on='driverId')[:]
+    all_drivers_races = total_results.groupby('fullname')['raceId'].count()
+    all_drivers_races_df = (pd.DataFrame({'Driver': all_drivers_races.index, 'Number of races': all_drivers_races})
+                            .sort_values('Number of races', ascending=False).iloc[0:20])
+
+    all_drivers_victories = total_results[lambda x: x['positionOrder']==1].groupby('fullname')['raceId'].count()
+    all_drivers_victories_df = (pd.DataFrame({'Driver': all_drivers_victories.index, 'Number of victories': all_drivers_victories})
+                                .sort_values('Number of victories', ascending=False).iloc[0:20])
+
+    all_drivers_2nd = total_results[lambda x: x['positionOrder'] == 2].groupby('fullname')['raceId'].count()
+    all_drivers_3rd = total_results[lambda x: x['positionOrder'] == 3].groupby('fullname')['raceId'].count()
+    all_drivers_podiums = all_drivers_victories + all_drivers_2nd + all_drivers_3rd
+    all_drivers_podiums_df = (pd.DataFrame({'Driver': all_drivers_podiums.index, 'Number of podiums': all_drivers_podiums})
+        .sort_values('Number of podiums', ascending=False).iloc[0:20])
+
+    if choice == 'Number of the races':
+        fig, ax = plt.subplots()
+        chart1 = sns.barplot(y=all_drivers_races_df['Driver'], x=all_drivers_races_df['Number of races'],
+                            ax=ax,  palette="viridis")
+        chart1.bar_label(chart1.containers[0], fontsize=8.5, color='black')
+        st.pyplot(fig)
+
+    if choice == 'Number of the podiums':
+        fig, ax = plt.subplots()
+        chart2 = sns.barplot(y=all_drivers_podiums_df['Driver'], x=all_drivers_podiums_df['Number of podiums'],
+                            ax=ax,  palette='flare')
+        chart2.bar_label(chart2.containers[0], fontsize=8.5, color='black')
+        st.pyplot(fig)
+
+    if choice == 'Number of the victories':
+        fig, ax = plt.subplots()
+        chart3 = sns.barplot(y=all_drivers_victories_df['Driver'], x=all_drivers_victories_df['Number of victories'],
+                            ax=ax,  palette='rocket')
+        chart3.bar_label(chart3.containers[0], fontsize=8.5, color='black')
+        st.pyplot(fig)
+
+
+
 
 
