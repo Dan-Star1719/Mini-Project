@@ -197,26 +197,108 @@ with st.echo(code_location='below'):
                     alt.Y('type1', scale=alt.Scale(zero=False), axis=alt.Axis(title='Session')),
                     color=alt.Color('fullname', legend=alt.Legend(title='The drivers')),
                     tooltip = [alt.Tooltip('fullname'), alt.Tooltip('q1')])
-            .properties(height=500, width=500).interactive())
+            .properties(height=500, width=500, title='The qualification').interactive())
     fig2 = (alt.Chart(df).mark_point(size=50, filled=True)
             .encode(alt.X('q2', scale=alt.Scale(zero=False), axis=alt.Axis(title='Lap time')),
                     alt.Y('type2', scale=alt.Scale(zero=False), axis=alt.Axis(title='Session')),
                     color=alt.Color('fullname', legend=alt.Legend(title='The drivers')),
                     tooltip = [alt.Tooltip('fullname'), alt.Tooltip('q2')])
-            .properties(height=500, width=500).interactive())
+            .properties(height=500, width=500, title='The qualification').interactive())
     fig3 = (alt.Chart(df).mark_point(size=50, filled=True)
             .encode(alt.X('q3', scale=alt.Scale(zero=False), axis=alt.Axis(title='Lap time')),
                     alt.Y('type3', scale=alt.Scale(zero=False), axis=alt.Axis(title='Session')),
                     color=alt.Color('fullname', legend=alt.Legend(title='The drivers')),
                     tooltip = [alt.Tooltip('fullname'), alt.Tooltip('q3')])
-            .properties(height=500, width=500).interactive())
+            .properties(height=500, width=500, title='The qualification').interactive())
     points = (alt.Chart(df3).mark_point(size=150, filled=True, color='black')
             .encode(alt.X('time', scale=alt.Scale(zero=False), axis=alt.Axis(title='Lap time')),
                     alt.Y('session', scale=alt.Scale(zero=False), axis=alt.Axis(title='Session')),
                     tooltip = [alt.Tooltip('time'), alt.Tooltip('session')])
-            .properties(height=500, width=500).interactive())
+            .properties(height=500, width=500, title='The qualification').interactive())
 
     st.altair_chart(fig1+fig2+fig3+points)
+
+    question = st.radio('Do you want to watch the graph for another race?', ['No, I want to watch this one',
+                                                                             'Yes, I want to choose another one'])
+
+    if question == 'Yes, I want to choose another one':
+        a = st.slider('Choose the year:', 1996, 2021)
+        races_in_this_year = races[lambda x: x['year'] == a]
+        if a:
+            gran_prix = st.selectbox('Choose the Gran Prix:', races_in_this_year['name'].unique())
+
+    if question:
+        prerace_df = lap_times.merge(races, left_on='raceId', right_on='raceId')[lambda x: x['year'] == a]
+        race_df = prerace_df[lambda x: x['name'] == gran_prix].merge(drivers, left_on='driverId', right_on='driverId')[
+            ['fullname', 'lap', 'position']]
+
+        df_for_start1 = (results.merge(drivers, left_on='driverId', right_on='driverId')
+            .merge(races, left_on='raceId', right_on='raceId')[lambda x: x['year'] == a])
+        df_for_start2 = df_for_start1[lambda x: x['name'] == gran_prix][['fullname', 'grid']]
+
+        for i in range(len(df_for_start2.index)):
+            if df_for_start2.iloc[i]['grid'] > 0:
+                race_df = race_df.append({'fullname': df_for_start2.iloc[i]['fullname'], 'lap': 0,
+                                          'position': df_for_start2.iloc[i]['grid']}, ignore_index=True)
+
+        selection = alt.selection_multi(fields=['fullname'], bind='legend')
+
+        fig = alt.Chart(race_df).mark_line(point=True).encode(
+            x=alt.X("lap", scale=alt.Scale(zero=False), title="Lap"),
+            y=alt.Y("position", scale=alt.Scale(zero=False), sort='descending', axis=alt.Axis(title='Position')),
+            color=alt.Color("fullname"), tooltip=[alt.Tooltip('fullname'), alt.Tooltip('lap'), alt.Tooltip('position')],
+            opacity=alt.condition(selection, alt.value(1), alt.value(0.2))
+        ).properties(
+            title="The race",
+            width=600,
+            height=600,
+        ).add_selection(selection).interactive()
+
+        st.altair_chart(fig)
+
+
+
+    b = st.slider('Choose the year', 1950, 2021)
+
+    table_of_standings = driver_standings.merge(races, left_on='raceId', right_on='raceId')[lambda x: x['year']==b]\
+        .merge(drivers, left_on='driverId', right_on='driverId')[['fullname', 'round', 'position', 'points']]
+
+    selection1 = alt.selection_multi(fields=['fullname'], bind='legend')
+
+    graph1 = alt.Chart(table_of_standings).mark_line(point=True).encode(
+        x=alt.X("round", scale=alt.Scale(zero=False), title="Round"),
+        y=alt.Y("position", scale=alt.Scale(zero=False), sort='descending', axis=alt.Axis(title='Position')),
+        color=alt.Color("fullname"), tooltip=[alt.Tooltip('fullname'), alt.Tooltip('position'), alt.Tooltip('points')],
+        opacity=alt.condition(selection1, alt.value(1), alt.value(0.2))
+    ).properties(
+        title="The championship battle",
+        width=600,
+        height=600,
+    ).add_selection(selection1).interactive()
+
+    for i in range(len(table_of_standings['fullname'].unique())):
+        table_of_standings = table_of_standings.append({'fullname': table_of_standings['fullname'].unique()[i], 'round': 0,
+                                      'position': 0, 'points': 0}, ignore_index=True)
+
+    graph2 = alt.Chart(table_of_standings).mark_line(point=True).encode(
+        x=alt.X("round", scale=alt.Scale(zero=False), title="Round"),
+        y=alt.Y("points", scale=alt.Scale(zero=False), sort='ascending', axis=alt.Axis(title='Points')),
+        color=alt.Color("fullname"), tooltip=[alt.Tooltip('fullname'), alt.Tooltip('position'), alt.Tooltip('points')],
+        opacity=alt.condition(selection1, alt.value(1), alt.value(0.2))
+    ).properties(
+        title="The championship battle",
+        width=600,
+        height=600,
+    ).add_selection(selection1).interactive()
+
+    st.altair_chart(graph1 & graph2)
+
+    
+
+
+
+
+
 
 
 
