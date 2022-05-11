@@ -303,11 +303,13 @@ with st.echo(code_location='below'):
     total_driver_results['victories'] = first_places1
     total_driver_results['podiums'] = podiums1
 
-    plot1 = (ggplot(total_driver_results, aes(x='finishes', y='victories'))
+    total_driver_results2 = total_driver_results.fillna(0)
+
+    plot1 = (ggplot(total_driver_results2, aes(x='finishes', y='victories'))
              + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
     st.pyplot(ggplot.draw(plot1))
 
-    plot2 = (ggplot(total_driver_results, aes(x='finishes', y='podiums'))
+    plot2 = (ggplot(total_driver_results2, aes(x='finishes', y='podiums'))
              + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
     st.pyplot(ggplot.draw(plot2))
 
@@ -316,17 +318,26 @@ with st.echo(code_location='below'):
     st.pyplot(ggplot.draw(plot3))
 
 
+    c = st.slider('Year', 1996, 2021)
+    races_in_this_year = races[lambda x: x['year'] == c]
+    gran_prix = st.selectbox('Choose the Gran Prix:', races_in_this_year['name'].unique())
+
+    lap_times_gp = (lap_times.merge(races, left_on='raceId', right_on='raceId')[lambda x: x['year'] == c]
+     .merge(drivers, left_on='driverId', right_on='driverId')[lambda x: x['name'] == gran_prix])
+
+    the_driver = st.selectbox('Choose the driver:', lap_times_gp['fullname'].unique())
+
+    driver_laps = lap_times_gp[lambda x: x['fullname']==the_driver][['fullname', 'lap', 'position', 'milliseconds']]
+
+    plot4 = (ggplot(driver_laps, aes(x='lap', y='milliseconds'))
+             + geom_point(aes(color='milliseconds')) + geom_smooth())
+    st.pyplot(ggplot.draw(plot4))
 
 
-    total_driver_results = total_driver_results.fillna(0)
 
-    plot1 = (ggplot(total_driver_results, aes(x='finishes', y='victories'))
-             + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
-    st.pyplot(ggplot.draw(plot1))
 
-    plot2 = (ggplot(total_driver_results, aes(x='finishes', y='podiums'))
-             + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
-    st.pyplot(ggplot.draw(plot2))
+
+
 
 
 
