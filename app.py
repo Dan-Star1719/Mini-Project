@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import altair as alt
-import requests
 import plotly.express as px
+from plotnine import ggplot, aes, geom_point, geom_smooth
 
 with st.echo(code_location='below'):
     st.write(f"### Formula 1 data analysis")
@@ -293,7 +292,43 @@ with st.echo(code_location='below'):
 
     st.altair_chart(graph1 & graph2)
 
-    
+    results_by_drivers = results.merge(drivers, left_on='driverId', right_on='driverId')
+    first_places1 = results_by_drivers[lambda x: x['positionOrder'] == 1].groupby('fullname')['raceId'].count()
+    second_places1 = results_by_drivers[lambda x: x['positionOrder'] == 2].groupby('fullname')['raceId'].count()
+    third_places1 = results_by_drivers[lambda x: x['positionOrder'] == 3].groupby('fullname')['raceId'].count()
+    finishes = results_by_drivers.groupby('fullname')['raceId'].count()
+    podiums1 = first_places1 + second_places1 + third_places1
+    total_driver_results = pd.DataFrame()
+    total_driver_results['finishes'] = finishes
+    total_driver_results['victories'] = first_places1
+    total_driver_results['podiums'] = podiums1
+
+    plot1 = (ggplot(total_driver_results, aes(x='finishes', y='victories'))
+             + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
+    st.pyplot(ggplot.draw(plot1))
+
+    plot2 = (ggplot(total_driver_results, aes(x='finishes', y='podiums'))
+             + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
+    st.pyplot(ggplot.draw(plot2))
+
+    plot3 = (ggplot(total_driver_results, aes(x='podiums', y='victories'))
+             + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
+    st.pyplot(ggplot.draw(plot3))
+
+
+
+
+    total_driver_results = total_driver_results.fillna(0)
+
+    plot1 = (ggplot(total_driver_results, aes(x='finishes', y='victories'))
+             + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
+    st.pyplot(ggplot.draw(plot1))
+
+    plot2 = (ggplot(total_driver_results, aes(x='finishes', y='podiums'))
+             + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
+    st.pyplot(ggplot.draw(plot2))
+
+
 
 
 
