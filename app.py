@@ -1,3 +1,4 @@
+import numpy as np
 import streamlit as st
 import pandas as pd
 import seaborn as sns
@@ -161,8 +162,52 @@ with st.echo(code_location='below'):
         chart3.bar_label(chart3.containers[0], fontsize=8.5, color='black')
         st.pyplot(fig)
 
+    agree = st.checkbox('Show:')
+
+    if agree:
+        data = (results[lambda x: x['positionOrder'] == 1]
+                .merge(constructors, left_on='constructorId', right_on='constructorId')
+                .merge(races[['year', 'raceId']], left_on='raceId', right_on='raceId')[['name', 'positionOrder', 'year']].sort_values('year'))
+        data1 = data.pivot_table(values='positionOrder', index='name',  columns='year', aggfunc='count').fillna(0)
+
+        data1
+        data2 = np.cumsum(data1, axis=1).unstack().reset_index()
+
+        data2['victories'] = data2[0]
+
+        fig = px.bar(data2, x='victories', y="name", color="name",
+                     animation_frame="year")
+        st.plotly_chart(fig)
+
+    """Some analytics"""
+
+    results_by_drivers = results.merge(drivers, left_on='driverId', right_on='driverId')
+    first_places1 = results_by_drivers[lambda x: x['positionOrder'] == 1].groupby('fullname')['raceId'].count()
+    second_places1 = results_by_drivers[lambda x: x['positionOrder'] == 2].groupby('fullname')['raceId'].count()
+    third_places1 = results_by_drivers[lambda x: x['positionOrder'] == 3].groupby('fullname')['raceId'].count()
+    finishes = results_by_drivers.groupby('fullname')['raceId'].count()
+    podiums1 = first_places1 + second_places1 + third_places1
+    total_driver_results = pd.DataFrame()
+    total_driver_results['finishes'] = finishes
+    total_driver_results['victories'] = first_places1
+    total_driver_results['podiums'] = podiums1
+
+    total_driver_results = total_driver_results.fillna(0)
+
+    plot1 = (ggplot(total_driver_results, aes(x='finishes', y='victories'))
+             + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
+    st.pyplot(ggplot.draw(plot1))
+
+    plot2 = (ggplot(total_driver_results, aes(x='finishes', y='podiums'))
+             + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
+    st.pyplot(ggplot.draw(plot2))
+
+    plot3 = (ggplot(total_driver_results[lambda x: x['podiums'] > 0], aes(x='podiums', y='victories'))
+             + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
+    st.pyplot(ggplot.draw(plot3))
 
 
+    """Some race analytics"""
 
     a = st.slider('Choose the year:', 2006, 2021)
     races_in_this_year = races[lambda x: x['year'] == a]
@@ -255,7 +300,36 @@ with st.echo(code_location='below'):
 
         st.altair_chart(fig)
 
+        new_race_df1 = (race_df.pivot_table(values='lap', index='fullname', columns='position', aggfunc='count')
+                       .fillna(0))
+        new_race_df2 = (race_df.pivot_table(values='position', index='fullname', aggfunc='mean')
+                       .fillna(0))
+        new_race_df1['average'] = new_race_df2['position']
 
+        new_race_df1 = new_race_df1.sort_values(by='average', ascending=True)
+
+        fig, ax = plt.subplots()
+        chart2 = sns.heatmap(data=new_race_df1.drop('average', axis=1),
+                             ax=ax, cbar=True, cmap='Oranges')
+        st.pyplot(fig)
+
+
+
+
+
+        lap_times_gp = (lap_times.merge(races, left_on='raceId', right_on='raceId')[lambda x: x['year'] == a]
+            .merge(drivers, left_on='driverId', right_on='driverId')[lambda x: x['name'] == gran_prix])
+
+        the_driver = st.selectbox('Choose the driver:', lap_times_gp['fullname'].unique())
+
+        driver_laps = lap_times_gp[lambda x: x['fullname'] == the_driver][
+            ['fullname', 'lap', 'position', 'milliseconds']]
+
+        plot4 = (ggplot(driver_laps, aes(x='lap', y='milliseconds'))
+                 + geom_point(aes(color='milliseconds')) + geom_smooth())
+        st.pyplot(ggplot.draw(plot4))
+
+    """The championship analysis"""
 
     b = st.slider('Choose the year', 1950, 2021)
 
@@ -292,46 +366,10 @@ with st.echo(code_location='below'):
 
     st.altair_chart(graph1 & graph2)
 
-    results_by_drivers = results.merge(drivers, left_on='driverId', right_on='driverId')
-    first_places1 = results_by_drivers[lambda x: x['positionOrder'] == 1].groupby('fullname')['raceId'].count()
-    second_places1 = results_by_drivers[lambda x: x['positionOrder'] == 2].groupby('fullname')['raceId'].count()
-    third_places1 = results_by_drivers[lambda x: x['positionOrder'] == 3].groupby('fullname')['raceId'].count()
-    finishes = results_by_drivers.groupby('fullname')['raceId'].count()
-    podiums1 = first_places1 + second_places1 + third_places1
-    total_driver_results = pd.DataFrame()
-    total_driver_results['finishes'] = finishes
-    total_driver_results['victories'] = first_places1
-    total_driver_results['podiums'] = podiums1
-
-    total_driver_results2 = total_driver_results.fillna(0)
-
-    plot1 = (ggplot(total_driver_results2, aes(x='finishes', y='victories'))
-             + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
-    st.pyplot(ggplot.draw(plot1))
-
-    plot2 = (ggplot(total_driver_results2, aes(x='finishes', y='podiums'))
-             + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
-    st.pyplot(ggplot.draw(plot2))
-
-    plot3 = (ggplot(total_driver_results, aes(x='podiums', y='victories'))
-             + geom_point(aes(color='finishes')) + geom_smooth(method='lm'))
-    st.pyplot(ggplot.draw(plot3))
 
 
-    c = st.slider('Year', 1996, 2021)
-    races_in_this_year = races[lambda x: x['year'] == c]
-    gran_prix = st.selectbox('Choose the Gran Prix:', races_in_this_year['name'].unique())
 
-    lap_times_gp = (lap_times.merge(races, left_on='raceId', right_on='raceId')[lambda x: x['year'] == c]
-     .merge(drivers, left_on='driverId', right_on='driverId')[lambda x: x['name'] == gran_prix])
 
-    the_driver = st.selectbox('Choose the driver:', lap_times_gp['fullname'].unique())
-
-    driver_laps = lap_times_gp[lambda x: x['fullname']==the_driver][['fullname', 'lap', 'position', 'milliseconds']]
-
-    plot4 = (ggplot(driver_laps, aes(x='lap', y='milliseconds'))
-             + geom_point(aes(color='milliseconds')) + geom_smooth())
-    st.pyplot(ggplot.draw(plot4))
 
 
 
