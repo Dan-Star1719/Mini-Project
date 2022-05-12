@@ -16,7 +16,7 @@ with st.echo(code_location='below'):
 
     circuits = get_data("circuits.csv")
     constructor_results = get_data("constructor_results.csv")
-    constructor_standings = get_data("constructor_standings.csv")
+    constructor_standings = get_data("ConstructorStandings.csv")
     constructors = get_data("constructors.csv")
     driver_standings = get_data("driver_standings.csv")
     drivers = get_data("drivers.csv")
@@ -28,6 +28,7 @@ with st.echo(code_location='below'):
     seasons = get_data("seasons.csv")
     sprint_results = get_data("sprint_results.csv")
     status = get_data("status.csv")
+
 
     drivers['fullname'] = drivers['forename'] + ' ' + drivers['surname']
 
@@ -162,22 +163,26 @@ with st.echo(code_location='below'):
         chart3.bar_label(chart3.containers[0], fontsize=8.5, color='black')
         st.pyplot(fig)
 
-    agree = st.checkbox('Show:')
+    #agree = st.checkbox('Show:')
 
-    if agree:
+    @st.cache(suppress_st_warning=True)
+    def animation():
         data = (results[lambda x: x['positionOrder'] == 1]
                 .merge(constructors, left_on='constructorId', right_on='constructorId')
-                .merge(races[['year', 'raceId']], left_on='raceId', right_on='raceId')[['name', 'positionOrder', 'year']].sort_values('year'))
-        data1 = data.pivot_table(values='positionOrder', index='name',  columns='year', aggfunc='count').fillna(0)
+                .merge(races[['year', 'raceId']], left_on='raceId', right_on='raceId')[
+                    ['name', 'positionOrder', 'year']].sort_values('year'))
+        data1 = data.pivot_table(values='positionOrder', index='name', columns='year', aggfunc='count').fillna(0)
 
-        data1
         data2 = np.cumsum(data1, axis=1).unstack().reset_index()
 
         data2['victories'] = data2[0]
 
         fig = px.bar(data2, x='victories', y="name", color="name",
                      animation_frame="year")
-        st.plotly_chart(fig)
+        return fig
+
+    st.plotly_chart(animation())
+
 
     """Some analytics"""
 
@@ -368,22 +373,10 @@ with st.echo(code_location='below'):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    year = st.slider('Choose the year:', 1958, 2021)
+    fig, ax = plt.subplots()
+    data = constructor_standings[lambda x: x['Year']==year]
+    chart2 = sns.barplot(data=data, x='PTS', y='Team',
+                         ax=ax, palette='flare')
+    chart2.bar_label(chart2.containers[0], fontsize=8.5, color='black')
+    st.pyplot(fig)
